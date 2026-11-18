@@ -123,7 +123,7 @@ func adjustedWeighedLength(text string) int {
 		urlEnds[url.ByteRange.Start] = url.ByteRange.Stop
 	}
 	emojiEnds := map[int]int{}
-	for _, loc := range emojiRegex.FindAllStringIndex(normalized, -1) {
+	for _, loc := range findEmojiIndexes(normalized) {
 		emojiEnds[loc[0]] = loc[1]
 	}
 
