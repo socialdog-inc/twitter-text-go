@@ -281,7 +281,10 @@ func ExtractUrls(text string) []*TwitterEntity {
 				url = url[tcoLoc[0]:tcoLoc[1]]
 				matchEnd = matchStart + len(url)
 			}
-			if !areDomainLengthsValid(url) {
+			// Check only the domain part. Passing the whole url makes a long
+			// path (e.g. "com/articles/...") count as one domain label.
+			domain := substr[match[validUrlGroupDomain*2]:match[validUrlGroupDomain*2+1]]
+			if !areDomainLengthsValid(domain) {
 				continue
 			}
 			result = append(result,

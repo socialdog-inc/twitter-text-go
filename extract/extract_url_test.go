@@ -3,6 +3,7 @@ package extract
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	goyaml "gopkg.in/yaml.v1"
@@ -187,5 +188,36 @@ func TestTlds(t *testing.T) {
 				t.Errorf("ExtractMentionedScreenNames returned entity with wrong type. Expected:MENTION Got:%v", actual.Type)
 			}
 		}
+	}
+}
+
+// パスやクエリ文字列の長さは、ドメインの各部分の長さ（63 バイトまで）の判定に含めない
+func TestExtractUrlsWithLongPath(t *testing.T) {
+	tests := map[string]struct {
+		text string
+		want []string
+	}{
+		"パスが63バイトを超えるURLを抽出する": {
+			text: "記事 https://example.com/articles/2026/11/17/some-long-article-title-slug?utm_source=socialdog&utm_medium=rss です",
+			want: []string{"https://example.com/articles/2026/11/17/some-long-article-title-slug?utm_source=socialdog&utm_medium=rss"},
+		},
+		"ドメインの一部が63バイトを超えるURLは抽出しない": {
+			text: "記事 https://" + strings.Repeat("a", 64) + ".com/ です",
+			want: nil,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := ExtractUrls(tt.text)
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d urls %v, want %v", len(got), got, tt.want)
+			}
+			for i, w := range tt.want {
+				if got[i].Text != w {
+					t.Errorf("got %q, want %q", got[i].Text, w)
+				}
+			}
+		})
 	}
 }
