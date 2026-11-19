@@ -26,7 +26,7 @@ func TestTweetLength(t *testing.T) {
 		t.FailNow()
 	}
 
-	lengthTests, ok := tests.(map[interface{}]interface{})["WeightedTweetsCounterTest"]
+	lengthTests, ok := tests.(map[interface{}]interface{})["WeightedTweetsWithDiscountedEmojiCounterTest"]
 	if !ok {
 		t.Errorf("Conformance file did not contain length tests")
 		t.FailNow()

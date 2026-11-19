@@ -113,36 +113,46 @@ func ParseTweet(text string) (Tweet, error) {
 	return tweet, err
 }
 
-// Returns the length of the weightedLength of a tweet, per the twitter algorithm
+// Returns the length of the weightedLength of a tweet, per the twitter-text v3 config.
+// Like twitter-text-php Parser::parseTweet, an emoji sequence counts as one emoji.
 func adjustedWeighedLength(text string) int {
-	length := weightedLength(text)
-	urls := extract.ExtractUrls(text)
-	adjustments := 0
-	for _, url := range urls {
-		length -= weightedLength(url.Text)
-		if strings.HasPrefix(url.Text, "https://") {
-			adjustments += shortHttpsUrlLength
-		} else {
-			adjustments += shortUrlLength
-		}
+	normalized := formC.String(text)
+
+	urlEnds := map[int]int{}
+	for _, url := range extract.ExtractUrls(normalized) {
+		urlEnds[url.ByteRange.Start] = url.ByteRange.Stop
 	}
-	return adjustments + (length / scale)
+	emojiEnds := map[int]int{}
+	for _, loc := range findEmojiIndexes(normalized) {
+		emojiEnds[loc[0]] = loc[1]
+	}
+
+	weighted := 0
+	for offset := 0; offset < len(normalized); {
+		if end, ok := urlEnds[offset]; ok {
+			weighted += shortUrlLength * scale
+			offset = end
+			continue
+		}
+		if end, ok := emojiEnds[offset]; ok {
+			weighted += defaultWeight
+			offset = end
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(normalized[offset:])
+		weighted += runeWeight(r)
+		offset += size
+	}
+	return weighted / scale
 }
 
-func weightedLength(text string) int {
-	normalized := formC.String(text)
-	weightedLength := 0
-	for _, val := range normalized {
-		length := defaultWeight
-		for _, weightRange := range weightRanges {
-			if val >= weightRange.start && val <= weightRange.end {
-				length = weightRange.weight
-				break
-			}
+func runeWeight(r rune) int {
+	for _, weightRange := range weightRanges {
+		if r >= weightRange.start && r <= weightRange.end {
+			return weightRange.weight
 		}
-		weightedLength += length
 	}
-	return weightedLength
+	return defaultWeight
 }
 
 // Checks whether a string is a valid tweet and returns true or false
